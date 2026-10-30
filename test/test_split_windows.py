@@ -49,3 +49,27 @@ def test_collect_window_counts():
     fake = FakeSam({iq: 10, output_query("reco1", iq): 9, output_query("caf", iq): 8})
     rows = collect_window_counts(fake, "raw", ["reco1", "caf"], w)
     assert rows == {"input": [10], "reco1": [9], "caf": [8]}
+
+
+def test_recent_window_bounds_ends_yesterday():
+    from datetime import date
+    from split_windows import recent_window_bounds
+    # Run on 28 Oct: the daily chunk is 27 Oct 04:00 CDT.
+    bounds = recent_window_bounds(date(2026, 10, 28), "2026-10-25 04:00", timedelta(days=1), timedelta(hours=3), 1)
+    assert bounds == [(utc(2026, 10, 27, 9), utc(2026, 10, 27, 12))]
+    week = recent_window_bounds(date(2026, 10, 30), "2026-10-20 04:00", timedelta(days=1), timedelta(hours=3), 7)
+    assert [b[0] for b in week] == [utc(2026, 10, d, 9) for d in range(23, 30)]
+
+
+def test_recent_window_bounds_clamped_to_first_start():
+    from datetime import date
+    from split_windows import recent_window_bounds
+    # Only 25-27 Oct exist when run on 28 Oct, so a 7-day request returns 3.
+    bounds = recent_window_bounds(date(2026, 10, 28), "2026-10-25 04:00", timedelta(days=1), timedelta(hours=3), 7)
+    assert [b[0] for b in bounds] == [utc(2026, 10, d, 9) for d in (25, 26, 27)]
+
+
+def test_recent_window_bounds_before_first_window_is_empty():
+    from datetime import date
+    from split_windows import recent_window_bounds
+    assert recent_window_bounds(date(2026, 10, 25), "2026-10-25 04:00", timedelta(days=1), timedelta(hours=3), 1) == []

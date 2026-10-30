@@ -6,7 +6,7 @@ create_date). Counting goes through any object with `count(query)`, i.e.
 samweb_fetcher or a test fake.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 CENTRAL = ZoneInfo("America/Chicago")
@@ -22,6 +22,20 @@ def window_bounds(first_start, step, window, n):
         s = s.replace(tzinfo=CENTRAL)
         bounds.append((s.astimezone(timezone.utc), (s + window).astimezone(timezone.utc)))
     return bounds
+
+
+def recent_window_bounds(today, first_start, step, window, count):
+    """Return the UTC bounds of the last `count` windows that started before
+    Central date `today` (the newest on the day before), never earlier than
+    `first_start`. Empty if no window has started yet. Assumes step is whole days."""
+    first = datetime.strptime(first_start, "%Y-%m-%d %H:%M")
+    last = datetime.combine(today - timedelta(days=1), first.time())
+    available = (last - first) // step + 1
+    n = min(count, available)
+    if n <= 0:
+        return []
+    earliest = last - (n - 1) * step
+    return window_bounds(earliest.strftime("%Y-%m-%d %H:%M"), step, window, n)
 
 
 def _stamp(dt):

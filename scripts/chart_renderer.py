@@ -118,7 +118,7 @@ def render_window_chart(labels, series, *, title, filename):
     names = list(series)
     n, w = len(names), 0.13
     x = np.arange(len(labels))
-    top = max(max(v) for v in series.values())
+    top = max(1, max(max(v) for v in series.values()))
 
     fig, ax = plt.subplots(figsize=(10, 5.8), dpi=200)
     for i, name in enumerate(names):
