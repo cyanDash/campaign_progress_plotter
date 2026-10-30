@@ -103,3 +103,44 @@ def render_bar_chart(
     plt.savefig(filename, dpi=300)
     plt.tight_layout()
     plt.close()
+
+
+WINDOW_COLORS = ['#9a9a96', '#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4']
+
+
+def render_window_chart(labels, series, *, title, filename):
+    """Render grouped bars, one group per split window, and save to `filename`.
+
+    `series` is an ordered {name: [count per window]} whose first entry is the
+    input; every other series gets a red "missing n" under a group when its
+    count falls short of the input (the worst shortfall is shown).
+    """
+    names = list(series)
+    n, w = len(names), 0.13
+    x = np.arange(len(labels))
+    top = max(max(v) for v in series.values())
+
+    fig, ax = plt.subplots(figsize=(10, 5.8), dpi=200)
+    for i, name in enumerate(names):
+        pos = x + (i - (n - 1) / 2) * (w + 0.01)
+        ax.bar(pos, series[name], w, label=name, color=WINDOW_COLORS[i % len(WINDOW_COLORS)], zorder=3)
+        for p, v in zip(pos, series[name]):
+            ax.text(p, v + top * 0.01, str(v), ha='center', va='bottom', fontsize=7)
+    inputs = series[names[0]]
+    for xi, j in zip(x, range(len(labels))):
+        missing = inputs[j] - min(series[k][j] for k in names[1:])
+        if missing:
+            ax.text(xi, -top * 0.12, f'missing {missing}', ha='center', fontsize=8, color='#c0392b')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_ylabel('files')
+    ax.set_ylim(0, top * 1.1)
+    ax.set_title(title, fontsize=11)
+    ax.grid(axis='y', color='#e3e2de', zorder=0)
+    ax.set_axisbelow(True)
+    for s in ('top', 'right'):
+        ax.spines[s].set_visible(False)
+    ax.legend(ncol=n, frameon=False, fontsize=8, loc='upper left', bbox_to_anchor=(0, 1.0))
+    fig.subplots_adjust(bottom=0.17)
+    fig.savefig(filename)
+    plt.close(fig)

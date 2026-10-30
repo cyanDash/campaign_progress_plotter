@@ -3,7 +3,7 @@
 Consolidates the subprocess invocation, error handling, and samweb CLI output
 parsing that used to be duplicated across three separate wrapper functions.
 Production code calls these functions directly (they shell out to the real
-`samweb` CLI); tests substitute a fake with the same three-function interface.
+`samweb` CLI); tests substitute a fake with the same interface.
 
 Make sure your environment is set up and samweb-client is active before calling
 any of these.
@@ -21,6 +21,18 @@ def file_count(dataset, before):
         result = subprocess.check_output(command, shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         print(f"Error occurred while fetching files from dataset {dataset}: {e.output}. \n Make sure your environment is set up and samweb-client is active.")
+        return None
+    return int(result.splitlines()[0].decode('utf-8').split('\t')[1])
+
+
+def count(query):
+    """Return the number of files matching the SAM dimension `query`, or None if
+    the samweb query fails."""
+    try:
+        result = subprocess.check_output(
+            ["samweb", "list-files", query, "--summary"], stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred while counting files for query {query}: {e.output}. \n Make sure your environment is set up and samweb-client is active.")
         return None
     return int(result.splitlines()[0].decode('utf-8').split('\t')[1])
 
