@@ -1,0 +1,4 @@
+# Runtime dependencies of scripts/*.py (matplotlib pulls in the rest).
+# samweb is the UPS sam_web_client CLI, not a pip package.
+matplotlib==3.9.4
+numpy==2.0.2
