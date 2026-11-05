@@ -44,7 +44,7 @@ hours = int(window.total_seconds() // 3600)
 start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
 end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
 last_day = bounds[-1][0].astimezone(CENTRAL).date().isoformat()
-filename = f"{output_directory}/{campaign}_{last_day}_{mode}.png"
+filename = f"{output_directory}/{campaign}_{last_day}_{mode}.pdf"
 render_window_chart(
     labels, series,
     title=f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)",

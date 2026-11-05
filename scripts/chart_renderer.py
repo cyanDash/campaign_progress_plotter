@@ -134,7 +134,7 @@ def render_window_chart(labels, series, *, title, filename):
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylabel('files')
-    ax.set_ylim(0, top * 1.1)
+    ax.set_ylim(0, top * 1.5)
     ax.set_title(title, fontsize=11)
     ax.grid(axis='y', color='#e3e2de', zorder=0)
     ax.set_axisbelow(True)
