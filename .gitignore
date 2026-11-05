@@ -2,3 +2,4 @@ __pycache__/
 plots/
 *.ipynb_checkpoints
 *.ipynb
+venv/
