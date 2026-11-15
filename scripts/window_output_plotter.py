@@ -27,27 +27,36 @@ tiers = ["reco1", "larcvreco1", "histreco2", "flatcaf", "caf"]
 output_directory = "/exp/sbnd/app/users/sbndpro/mcp/SBND2026A/srcs/sbnutil/keepups/sbnd/data_run3/plots"
 #####################################################################
 
-mode = sys.argv[1] if len(sys.argv) > 1 else "daily"
-count = {"daily": 1, "weekly": 7}[mode]
-today = date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else datetime.now(CENTRAL).date()
 
-bounds = recent_window_bounds(today, first_start, step, window, count)
-if not bounds:
-    sys.exit(f"No window has started before {today}; nothing to plot.")
-definitions = [f"data_SBND2026A_{campaign}_{version}_{t}_sbnd" for t in tiers]
+def main(argv, sam=samweb_fetcher, output_directory=output_directory):
+    """Plot the window(s) chosen by `argv` ([mode, optional date]) and return
+    the PDF path. `sam` is any object with `count(query)`."""
+    mode = argv[0] if argv else "daily"
+    count = {"daily": 1, "weekly": 7}[mode]
+    today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
 
-rows = collect_window_counts(samweb_fetcher, input_dataset, definitions, bounds)
-series = {"input": rows["input"], **{t: rows[d] for t, d in zip(tiers, definitions)}}
+    bounds = recent_window_bounds(today, first_start, step, window, count)
+    if not bounds:
+        sys.exit(f"No window has started before {today}; nothing to plot.")
+    definitions = [f"data_SBND2026A_{campaign}_{version}_{t}_sbnd" for t in tiers]
 
-labels = [s.astimezone(CENTRAL).strftime("%a %d %b") for s, _ in bounds]
-hours = int(window.total_seconds() // 3600)
-start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
-end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
-filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}.pdf"
-render_window_chart(
-    labels, series,
-    title=f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)",
-    filename=filename,
-)
-print(series)
-print(filename)
+    rows = collect_window_counts(sam, input_dataset, definitions, bounds)
+    series = {"input": rows["input"], **{t: rows[d] for t, d in zip(tiers, definitions)}}
+
+    labels = [s.astimezone(CENTRAL).strftime("%a %d %b") for s, _ in bounds]
+    hours = int(window.total_seconds() // 3600)
+    start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
+    end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
+    filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}.pdf"
+    render_window_chart(
+        labels, series,
+        title=f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)",
+        filename=filename,
+    )
+    print(series)
+    print(filename)
+    return filename
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -6,6 +6,8 @@ Purely presentational: takes plain data and pre-formatted labels, doesn't know
 about campaigns, SAM, or how a projection was computed.
 """
 
+import matplotlib
+matplotlib.use("Agg")  # file output only; a set DISPLAY (ssh -X) must not pick an X backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
