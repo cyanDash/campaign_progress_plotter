@@ -15,3 +15,7 @@ source "${_plotter_dir}/venv/bin/activate"
 source /cvmfs/fermilab.opensciencegrid.org/products/common/etc/setups.sh
 setup sam_web_client
 export SAM_EXPERIMENT=sbnd
+
+# The shared home may not be writable (e.g. as sbndpro); give matplotlib a cache it can write.
+export MPLCONFIGDIR="/tmp/matplotlib_${USER}"
+mkdir -p "${MPLCONFIGDIR}"
