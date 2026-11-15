@@ -16,7 +16,7 @@ from chart_renderer import render_window_chart
 
 #####################################################################
 # Must match the campaign's ini ([split] first_start/step/window).
-first_start = "2026-10-25 04:00"  # Central
+first_start = "2026-11-15 00:00"  # Central
 step = timedelta(days=1)
 window = timedelta(hours=3)
 input_dataset = "run3_raw_data_ongoing"
