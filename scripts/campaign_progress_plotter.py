@@ -10,14 +10,21 @@ from chart_renderer import render_bar_chart
 
 #####################################################################
 # Campaign Information:
-campaign_type = 'mc' # 'data' or 'mc'.
-target = 249946 # If running an MC campaign, enter the number of files you want to process, for data campaigns this will the size of the input dataset so will be redefined later in the code.
-campaign = "SBND2026A_gen2_PDS_DetVar_Sample3" # Must match input_dataset + "_" + campaign + "_recovery_campaign".
-input_dataset = r"aurora_SBND2026A_gen2_BNBLight_DevSample_prodgenie_corsika_proton_rockbox0p1_sbnd_CV_v10_14_02_03_reco1_sbnd"
-output_dataset = r"mc_SBND2026A_prodgenie_corsika_proton_rockbox0p1_sbnd_PDS_detvar_Sample3_v10_14_02_0602_flatcaf_sbnd"
+campaign_type = "override me" # 'data' or 'mc'.
+target = "override me" # If running an MC campaign, enter the number of files you want to process, for data campaigns this will the size of the input dataset so will be redefined later in the code.
+campaign = "override me" # Must match input_dataset + "_" + campaign + "_recovery_campaign".
+input_dataset = "override me"
+output_dataset = "override me"
 
-output_directory = "/exp/sbnd/app/users/sdas1/slides/sbnd_production/Update on PDS Detvar 3 Campaign/plots"
+output_directory = "."  # Current working directory.
 #####################################################################
+
+_config = dict(campaign_type=campaign_type, target=target, campaign=campaign,
+               input_dataset=input_dataset, output_dataset=output_dataset,
+               output_directory=output_directory)
+_unset = [k for k, v in _config.items() if v == "override me"]
+if _unset:
+    raise ValueError(f"Set these in the config block before running: {', '.join(_unset)}")
 
 
 now = datetime.now(timezone.utc)
