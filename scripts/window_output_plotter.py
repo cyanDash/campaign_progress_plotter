@@ -24,7 +24,7 @@ campaign = "Auto_POMS_SBND2026A_Gen2_Run3_BeamLight"
 version = "v10_14_02_08"
 tiers = ["reco1", "larcvreco1", "histreco2", "flatcaf", "caf"]
 
-output_directory = "plots"
+output_directory = "/exp/sbnd/app/users/sbndpro/mcp/SBND2026A/srcs/sbnutil/keepups/sbnd/data_run3/plots"
 #####################################################################
 
 mode = sys.argv[1] if len(sys.argv) > 1 else "daily"
@@ -43,8 +43,7 @@ labels = [s.astimezone(CENTRAL).strftime("%a %d %b") for s, _ in bounds]
 hours = int(window.total_seconds() // 3600)
 start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
 end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
-last_day = bounds[-1][0].astimezone(CENTRAL).date().isoformat()
-filename = f"{output_directory}/{campaign}_{last_day}_{mode}.pdf"
+filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}.pdf"
 render_window_chart(
     labels, series,
     title=f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)",
