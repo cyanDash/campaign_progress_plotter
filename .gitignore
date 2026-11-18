@@ -3,3 +3,5 @@ plots/
 *.ipynb_checkpoints
 *.ipynb
 venv/
+cache/
+.pytest_cache/
