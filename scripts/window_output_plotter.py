@@ -4,7 +4,9 @@ campaign run with poms_auto_submit's [split] window. Run after `source setup.sh`
     window_output_plotter.py daily   [YYYY-MM-DD]   yesterday's window
     window_output_plotter.py weekly  [YYYY-MM-DD]   the last 7 windows
 
-The optional date replaces today (Central) as the run date.
+The optional date replaces today (Central) as the run date. Add --debug to also
+plot worker exit status, memory and wall time from condor, written to
+sbnd_data_run3_keepup_<mode>_debug.pdf instead.
 """
 
 import os
@@ -69,9 +71,13 @@ def collect_workers(condor, state_file, bounds, cache_path=None):
 
 def main(argv, sam=samweb_fetcher, output_directory=output_directory, condor=condor_fetcher, state_file=None,
          cache_path=None):
-    """Plot the window(s) chosen by `argv` ([mode, optional date]) and return
-    the PDF path. `sam` is any object with `count(query)`, `condor` one with
-    `workers_many(jobsub_job_ids, cache_path)`; with no worker data the plot is the bar chart alone."""
+    """Plot the window(s) chosen by `argv` ([mode, optional date, optional
+    --debug]) and return the PDF path. `sam` is any object with `count(query)`,
+    `condor` one with `workers_many(jobsub_job_ids, cache_path)`. Without
+    --debug condor is not asked and the plot is the bar chart alone; with it,
+    the worker panels are added (still the bar chart alone if no worker data)."""
+    debug = "--debug" in argv
+    argv = [a for a in argv if a != "--debug"]
     mode = argv[0] if argv else "daily"
     count = {"daily": 1, "weekly": 7}[mode]
     today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
@@ -88,9 +94,9 @@ def main(argv, sam=samweb_fetcher, output_directory=output_directory, condor=con
     hours = int(window.total_seconds() // 3600)
     start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
     end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
-    filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}.pdf"
+    filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}{'_debug' if debug else ''}.pdf"
     title = f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)"
-    workers = collect_workers(condor, state_file or default_state_file(), bounds, cache_path or default_cache_path())
+    workers = collect_workers(condor, state_file or default_state_file(), bounds, cache_path or default_cache_path()) if debug else []
     if workers:
         render_window_report(labels, series, workers, title=title, filename=filename)
     else:

@@ -68,23 +68,42 @@ def test_exits_before_the_first_window_has_started(tmp_path):
         wop.main(["daily", "2026-11-15"], sam=FakeSam(), output_directory=tmp_path, condor=FakeCondor(), state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json")
 
 
-def test_daily_asks_condor_for_the_slice_and_the_recovery_of_the_window(tmp_path):
-    condor = FakeCondor({"10@jobsub01.fnal.gov": [worker(0)], "20@jobsub01.fnal.gov": [worker(88, mem=14000, wall=12.1)]})
+def test_plain_run_never_asks_condor(tmp_path):
+    condor = FakeCondor({"10@jobsub01.fnal.gov": [worker(0)]})
 
     out = wop.main(["daily", "2026-11-16"], sam=FakeSam(), output_directory=tmp_path, condor=condor,
                    state_file=state_with_nov15(tmp_path), cache_path=tmp_path / "c.json")
 
+    assert condor.asked == [] and out.endswith("keepup_daily.pdf")
+
+
+def test_debug_writes_the_separate_debug_file(tmp_path):
+    condor = FakeCondor({"10@jobsub01.fnal.gov": [worker(0)], "20@jobsub01.fnal.gov": [worker(0)]})
+
+    out = wop.main(["weekly", "2026-11-16", "--debug"], sam=FakeSam(), output_directory=tmp_path, condor=condor,
+                   state_file=state_with_nov15(tmp_path), cache_path=tmp_path / "c.json")
+
+    assert out.endswith("keepup_weekly_debug.pdf") and (tmp_path / "sbnd_data_run3_keepup_weekly_debug.pdf").exists()
+    assert condor.asked
+
+
+def test_daily_asks_condor_for_the_slice_and_the_recovery_of_the_window(tmp_path):
+    condor = FakeCondor({"10@jobsub01.fnal.gov": [worker(0)], "20@jobsub01.fnal.gov": [worker(88, mem=14000, wall=12.1)]})
+
+    out = wop.main(["daily", "2026-11-16", "--debug"], sam=FakeSam(), output_directory=tmp_path, condor=condor,
+                   state_file=state_with_nov15(tmp_path), cache_path=tmp_path / "c.json")
+
     assert condor.asked == ["10@jobsub01.fnal.gov", "20@jobsub01.fnal.gov"]
-    assert (tmp_path / "sbnd_data_run3_keepup_daily.pdf").stat().st_size > 0 and out.endswith("daily.pdf")
+    assert (tmp_path / "sbnd_data_run3_keepup_daily_debug.pdf").stat().st_size > 0 and out.endswith("daily_debug.pdf")
 
 
 def test_plot_still_written_when_condor_cannot_be_read(tmp_path, capsys):
     condor = FakeCondor()  # every workers() call answers None
 
-    wop.main(["daily", "2026-11-16"], sam=FakeSam(), output_directory=tmp_path, condor=condor,
+    wop.main(["daily", "2026-11-16", "--debug"], sam=FakeSam(), output_directory=tmp_path, condor=condor,
              state_file=state_with_nov15(tmp_path), cache_path=tmp_path / "c.json")
 
-    assert (tmp_path / "sbnd_data_run3_keepup_daily.pdf").stat().st_size > 0
+    assert (tmp_path / "sbnd_data_run3_keepup_daily_debug.pdf").stat().st_size > 0
     assert "No condor data for slice Submission 1" in capsys.readouterr().out
 
 
