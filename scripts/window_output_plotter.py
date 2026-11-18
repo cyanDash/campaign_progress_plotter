@@ -7,12 +7,16 @@ campaign run with poms_auto_submit's [split] window. Run after `source setup.sh`
 The optional date replaces today (Central) as the run date.
 """
 
+import os
 import sys
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
+import condor_fetcher
 import samweb_fetcher
+from chart_renderer import render_window_chart, render_window_report
 from split_windows import recent_window_bounds, collect_window_counts, CENTRAL
-from chart_renderer import render_window_chart
+from window_jobs import window_submissions
 
 #####################################################################
 # Must match the campaign's ini ([split] first_start/step/window).
@@ -25,12 +29,49 @@ version = "v10_14_02_08"
 tiers = ["reco1", "larcvreco1", "histreco2", "flatcaf", "caf"]
 
 output_directory = "/exp/sbnd/app/users/sbndpro/mcp/SBND2026A/srcs/sbnutil/keepups/sbnd/data_run3/plots"
+# The ini name of the poms_auto_submit run; its State File names each window's
+# slice and recovery Submissions.
+state_name = "state_sbnd_beamlight_run3.json"
 #####################################################################
 
 
-def main(argv, sam=samweb_fetcher, output_directory=output_directory):
+def default_state_file():
+    """poms_auto_submit's State File: under $POMS_AUTO_SUBMIT_DIR (setup.sh
+    sets it), else the checkout beside this one."""
+    root = os.environ.get("POMS_AUTO_SUBMIT_DIR") or Path(__file__).resolve().parent.parent.parent / "poms_auto_submit"
+    return Path(root) / "logs" / campaign / state_name
+
+
+def default_cache_path():
+    """Where finished DAGs' worker rows are kept between runs (git-ignored)."""
+    return Path(__file__).resolve().parent.parent / "cache" / "condor_workers.json"
+
+
+def collect_workers(condor, state_file, bounds, cache_path=None):
+    """Every worker of the slice and recovery Submissions of the windows in
+    `bounds`, from condor in one batch, each tagged with its Submission's
+    `kind` and `submission_id`. A Submission condor cannot read is skipped."""
+    submissions = [s for found in window_submissions(state_file, bounds).values() for s in found]
+    known = [s for s in submissions if s["jobsub_job_id"]]
+    for s in submissions:
+        if not s["jobsub_job_id"]:
+            print(f"No jobsub id for {s['kind']} Submission {s['submission_id']}; leaving it out.")
+    by_job = condor.workers_many([s["jobsub_job_id"] for s in known], cache_path) if known else {}
+    workers = []
+    for s in known:
+        found = by_job.get(s["jobsub_job_id"])
+        if found is None:
+            print(f"No condor data for {s['kind']} Submission {s['submission_id']}; leaving it out.")
+            continue
+        workers.extend({**w, "kind": s["kind"], "submission_id": s["submission_id"]} for w in found)
+    return workers
+
+
+def main(argv, sam=samweb_fetcher, output_directory=output_directory, condor=condor_fetcher, state_file=None,
+         cache_path=None):
     """Plot the window(s) chosen by `argv` ([mode, optional date]) and return
-    the PDF path. `sam` is any object with `count(query)`."""
+    the PDF path. `sam` is any object with `count(query)`, `condor` one with
+    `workers_many(jobsub_job_ids, cache_path)`; with no worker data the plot is the bar chart alone."""
     mode = argv[0] if argv else "daily"
     count = {"daily": 1, "weekly": 7}[mode]
     today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
@@ -48,11 +89,12 @@ def main(argv, sam=samweb_fetcher, output_directory=output_directory):
     start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
     end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
     filename = f"{output_directory}/sbnd_data_run3_keepup_{mode}.pdf"
-    render_window_chart(
-        labels, series,
-        title=f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)",
-        filename=filename,
-    )
+    title = f"Input vs output files per split window ({start_local}-{end_local} Central, {hours}h window, step {step.days}d)"
+    workers = collect_workers(condor, state_file or default_state_file(), bounds, cache_path or default_cache_path())
+    if workers:
+        render_window_report(labels, series, workers, title=title, filename=filename)
+    else:
+        render_window_chart(labels, series, title=title, filename=filename)
     print(series)
     print(filename)
     return filename
