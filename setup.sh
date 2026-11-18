@@ -19,19 +19,3 @@ export SAM_EXPERIMENT=sbnd
 # The shared home may not be writable (e.g. as sbndpro); give matplotlib a cache it can write.
 export MPLCONFIGDIR="/tmp/matplotlib_${USER}"
 mkdir -p "${MPLCONFIGDIR}"
-
-# poms_auto_submit's checkout: its State File names each window's slice and
-# recovery Submissions. Override by exporting POMS_AUTO_SUBMIT_DIR first.
-POMS_AUTO_SUBMIT_DIR="${POMS_AUTO_SUBMIT_DIR:-${_plotter_dir}/../poms_auto_submit}"
-if [[ -d "${POMS_AUTO_SUBMIT_DIR}" ]]; then
-    export POMS_AUTO_SUBMIT_DIR="$(cd "${POMS_AUTO_SUBMIT_DIR}" && pwd)"
-else
-    echo "POMS_AUTO_SUBMIT_DIR=${POMS_AUTO_SUBMIT_DIR} does not exist; plots will be SAM-only" >&2
-    unset POMS_AUTO_SUBMIT_DIR
-fi
-
-# condor_history/condor_q need a bearer token for the worker-resource plots.
-# Without one the plots are SAM-only.
-export HTGETTOKENOPTS="--credkey=sbndpro/managedtokens/fifeutilgpvm01.fnal.gov -r production -a htvaultprod.fnal.gov -i sbnd"
-export BEARER_TOKEN_FILE="/tmp/bt_u$(id -u)_campaign_progress_plotter"
-htgettoken || echo "no condor token; plots will be SAM-only" >&2
