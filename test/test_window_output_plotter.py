@@ -127,3 +127,49 @@ def test_collect_workers_tags_each_worker_with_its_submission(tmp_path):
     workers = wop.collect_workers(condor, state_with_nov15(tmp_path), bounds)
 
     assert [(w["kind"], w["submission_id"]) for w in workers] == [("slice", "1"), ("recovery", "2")]
+
+
+def run_logged(tmp_path, argv, condor=None, state=None):
+    log = tmp_path / "run.log"
+    wop.main(argv, sam=FakeSam(), output_directory=tmp_path, condor=condor or FakeCondor(),
+             state_file=state or tmp_path / NO_STATE, cache_path=tmp_path / "c.json", log_file=log)
+    return log.read_text()
+
+
+def test_log_records_the_run_start_to_end(tmp_path):
+    text = run_logged(tmp_path, ["weekly", "2026-11-16", "--debug"],
+                      condor=FakeCondor(), state=state_with_nov15(tmp_path))
+
+    assert "===== plot run start =====" in text and "===== plot run end" in text
+    assert "mode=weekly date=2026-11-16 debug=True" in text
+    assert "window 2026-11-15 00:00 to 03:00 CST" in text
+    assert "{'input': [10]" in text  # the counts, as printed to stdout
+    assert f"{tmp_path}/sbnd_data_run3_keepup_weekly_debug.pdf" in text
+    assert "elapsed" in text
+    assert "No condor data for slice Submission 1" in text
+
+
+def test_a_failing_run_logs_the_error_and_does_not_end_normally(tmp_path):
+    log = tmp_path / "run.log"
+    with pytest.raises(SystemExit, match="nothing to plot"):
+        wop.main(["daily", "2026-11-15"], sam=FakeSam(), output_directory=tmp_path, condor=FakeCondor(),
+                 state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json", log_file=log)
+
+    text = log.read_text()
+    assert "===== plot run start =====" in text
+    assert "run failed" in text and "nothing to plot" in text
+    assert "===== plot run end" not in text
+
+
+def test_a_crash_logs_its_traceback_and_still_raises(tmp_path):
+    class BrokenSam:
+        def count(self, query):
+            raise RuntimeError("samweb down")
+
+    log = tmp_path / "run.log"
+    with pytest.raises(RuntimeError, match="samweb down"):
+        wop.main(["daily", "2026-11-16"], sam=BrokenSam(), output_directory=tmp_path, condor=FakeCondor(),
+                 state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json", log_file=log)
+
+    text = log.read_text()
+    assert "run failed" in text and "Traceback" in text and "samweb down" in text
