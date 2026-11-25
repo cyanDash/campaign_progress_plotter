@@ -129,9 +129,18 @@ def _plot(argv, sam, output_directory, condor, state_file, cache_path):
     the worker panels are added (still the bar chart alone if no worker data)."""
     debug = "--debug" in argv
     argv = [a for a in argv if a != "--debug"]
+    for a in argv:
+        if a.startswith("-"):
+            sys.exit(f"unknown option '{a}'; see --help")
     mode = argv[0] if argv else "daily"
-    count = {"daily": 1, "weekly": 7, "monthly": 30}[mode]
-    today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
+    counts = {"daily": 1, "weekly": 7, "monthly": 30}
+    if mode not in counts:
+        sys.exit(f"unknown mode '{mode}' (daily, weekly or monthly); see --help")
+    count = counts[mode]
+    try:
+        today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
+    except ValueError:
+        sys.exit(f"not a YYYY-MM-DD date: '{argv[1]}'; see --help")
     log.info(f"mode={mode} date={today} debug={debug}")
 
     bounds = recent_window_bounds(today, first_start, step, window, count)

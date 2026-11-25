@@ -222,3 +222,18 @@ def test_monthly_labels_are_month_over_day_but_weekly_keeps_the_weekday(tmp_path
 
     assert seen["monthly.pdf"][0] == "Nov\n15" and seen["monthly.pdf"][-1] == "Nov\n24"
     assert seen["weekly.pdf"][0] == "Wed 18 Nov"
+
+
+@pytest.mark.parametrize("argv, message", [
+    (["monthly", "--dubug"], "unknown option '--dubug'"),
+    (["monthly", "2026-13-45"], "not a YYYY-MM-DD date: '2026-13-45'"),
+    (["yearly"], "unknown mode 'yearly'"),
+])
+def test_bad_arguments_exit_with_a_short_message_pointing_to_help(tmp_path, argv, message):
+    sam = FakeSam()
+
+    with pytest.raises(SystemExit) as stop:
+        wop.main(argv, sam=sam, output_directory=tmp_path, condor=FakeCondor(), log_file=tmp_path / "run.log")
+
+    assert message in str(stop.value) and "--help" in str(stop.value)
+    assert sam.queries == [] and not list(tmp_path.glob("*.pdf"))
