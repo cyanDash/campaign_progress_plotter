@@ -1,12 +1,16 @@
 """Grouped-bar plot of input vs output file counts per split window, for a
 campaign run with poms_auto_submit's [split] window. Run after `source setup.sh`.
 
-    window_output_plotter.py daily   [YYYY-MM-DD]   yesterday's window
-    window_output_plotter.py weekly  [YYYY-MM-DD]   the last 7 windows
-    window_output_plotter.py -h | --help           this text
+    window_output_plotter.py daily   [YYYY-MM-DD]   yesterday's window, every output tier
+    window_output_plotter.py weekly  [YYYY-MM-DD]   the last 7 windows, every output tier
+    window_output_plotter.py monthly [YYYY-MM-DD]   the last 30 windows, input and flatcaf only
+    window_output_plotter.py -h | --help            this text
 
-The optional date replaces today (Central) as the run date. Add --debug to also
-plot worker exit status, memory and wall time from condor, written to
+The optional date replaces today (Central) as the run date; the newest window
+plotted is the day before it. Windows before the campaign's first one are left out.
+
+Output: sbnd_data_run3_keepup_<mode>.pdf. Add --debug to also plot worker exit
+status, memory and wall time from condor, written to
 sbnd_data_run3_keepup_<mode>_debug.pdf instead.
 
 Every run also appends to logs/window_output_plotter.log (git-ignored).
@@ -126,7 +130,7 @@ def _plot(argv, sam, output_directory, condor, state_file, cache_path):
     debug = "--debug" in argv
     argv = [a for a in argv if a != "--debug"]
     mode = argv[0] if argv else "daily"
-    count = {"daily": 1, "weekly": 7}[mode]
+    count = {"daily": 1, "weekly": 7, "monthly": 30}[mode]
     today = date.fromisoformat(argv[1]) if len(argv) > 1 else datetime.now(CENTRAL).date()
     log.info(f"mode={mode} date={today} debug={debug}")
 
@@ -135,10 +139,11 @@ def _plot(argv, sam, output_directory, condor, state_file, cache_path):
         sys.exit(f"No window has started before {today}; nothing to plot.")
     for start, end in bounds:
         log.info(f"window {start.astimezone(CENTRAL):%Y-%m-%d %H:%M} to {end.astimezone(CENTRAL):%H:%M} CST")
-    definitions = [f"data_SBND2026A_{campaign}_{version}_{t}_sbnd" for t in tiers]
+    shown = ["flatcaf"] if mode == "monthly" else tiers  # a month is only input vs the final output
+    definitions = [f"data_SBND2026A_{campaign}_{version}_{t}_sbnd" for t in shown]
 
     rows = collect_window_counts(sam, input_dataset, definitions, bounds)
-    series = {"input": rows["input"], **{t: rows[d] for t, d in zip(tiers, definitions)}}
+    series = {"input": rows["input"], **{t: rows[d] for t, d in zip(shown, definitions)}}
 
     labels = [s.astimezone(CENTRAL).strftime("%a %d %b") for s, _ in bounds]
     hours = int(window.total_seconds() // 3600)

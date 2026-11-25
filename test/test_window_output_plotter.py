@@ -184,5 +184,29 @@ def test_help_prints_usage_and_exits_without_plotting_or_logging(tmp_path, capsy
 
     out = capsys.readouterr().out
     assert stop.value.code == 0
-    assert "daily" in out and "weekly" in out and "--debug" in out
+    assert all(w in out for w in ("daily", "weekly", "monthly", "--debug", "keepup_<mode>.pdf", "logs/window_output_plotter.log"))
     assert sam.queries == [] and not log.exists() and not list(tmp_path.glob("*.pdf"))
+
+
+def test_monthly_plots_the_last_30_windows_with_only_input_and_flatcaf(tmp_path):
+    sam = FakeSam()
+
+    out = wop.main(["monthly", "2026-12-20"], sam=sam, output_directory=tmp_path, condor=FakeCondor(),
+                   state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json")
+
+    assert out == f"{tmp_path}/sbnd_data_run3_keepup_monthly.pdf"
+    assert (tmp_path / "sbnd_data_run3_keepup_monthly.pdf").stat().st_size > 0
+    assert len(sam.queries) == 60  # 30 windows x (input + flatcaf)
+    assert sum("flatcaf" in q for q in sam.queries) == 30
+    assert not any(t in q for q in sam.queries for t in ("reco1", "histreco2", "_caf_sbnd"))
+    # 2026-11-20 00:00 Central (CST) is 06:00 UTC: the oldest of the 30 days before Dec 20.
+    assert "create_date >= '2026-11-20T06:00:00'" in sam.queries[0]
+
+
+def test_monthly_early_in_the_campaign_plots_only_the_windows_that_exist(tmp_path):
+    sam = FakeSam()
+
+    wop.main(["monthly", "2026-11-25"], sam=sam, output_directory=tmp_path, condor=FakeCondor(),
+             state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json")
+
+    assert len(sam.queries) == 20  # Nov 15 to Nov 24: 10 windows
