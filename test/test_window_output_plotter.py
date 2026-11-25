@@ -173,3 +173,16 @@ def test_a_crash_logs_its_traceback_and_still_raises(tmp_path):
 
     text = log.read_text()
     assert "run failed" in text and "Traceback" in text and "samweb down" in text
+
+
+@pytest.mark.parametrize("flag", ["--help", "-h"])
+def test_help_prints_usage_and_exits_without_plotting_or_logging(tmp_path, capsys, flag):
+    sam, log = FakeSam(), tmp_path / "run.log"
+
+    with pytest.raises(SystemExit) as stop:
+        wop.main([flag], sam=sam, output_directory=tmp_path, condor=FakeCondor(), log_file=log)
+
+    out = capsys.readouterr().out
+    assert stop.value.code == 0
+    assert "daily" in out and "weekly" in out and "--debug" in out
+    assert sam.queries == [] and not log.exists() and not list(tmp_path.glob("*.pdf"))

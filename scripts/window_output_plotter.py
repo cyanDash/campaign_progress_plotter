@@ -3,6 +3,7 @@ campaign run with poms_auto_submit's [split] window. Run after `source setup.sh`
 
     window_output_plotter.py daily   [YYYY-MM-DD]   yesterday's window
     window_output_plotter.py weekly  [YYYY-MM-DD]   the last 7 windows
+    window_output_plotter.py -h | --help           this text
 
 The optional date replaces today (Central) as the run date. Add --debug to also
 plot worker exit status, memory and wall time from condor, written to
@@ -85,7 +86,11 @@ def main(argv, sam=samweb_fetcher, output_directory=output_directory, condor=con
          cache_path=None, log_file=None):
     """Run `_plot` with its messages sent to stdout and appended, timestamped,
     to `log_file` (default `default_log_path()`). A failed run logs why, with
-    the traceback for a crash, and still raises."""
+    the traceback for a crash, and still raises. `-h`/`--help` prints the
+    module's usage and exits 0 before anything is plotted or logged."""
+    if "-h" in argv or "--help" in argv:
+        print(__doc__.strip())
+        raise SystemExit(0)
     path = Path(log_file or default_log_path())
     path.parent.mkdir(parents=True, exist_ok=True)
     handlers = [logging.FileHandler(path), logging.StreamHandler(sys.stdout)]
