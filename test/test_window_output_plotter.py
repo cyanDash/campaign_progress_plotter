@@ -210,3 +210,15 @@ def test_monthly_early_in_the_campaign_plots_only_the_windows_that_exist(tmp_pat
              state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json")
 
     assert len(sam.queries) == 20  # Nov 15 to Nov 24: 10 windows
+
+
+def test_monthly_labels_are_month_over_day_but_weekly_keeps_the_weekday(tmp_path, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(wop, "render_window_chart", lambda labels, series, **kw: seen.setdefault(kw["filename"].split("keepup_")[1], labels))
+
+    for mode in ("monthly", "weekly"):
+        wop.main([mode, "2026-11-25"], sam=FakeSam(), output_directory=tmp_path, condor=FakeCondor(),
+                 state_file=tmp_path / NO_STATE, cache_path=tmp_path / "c.json")
+
+    assert seen["monthly.pdf"][0] == "Nov\n15" and seen["monthly.pdf"][-1] == "Nov\n24"
+    assert seen["weekly.pdf"][0] == "Wed 18 Nov"

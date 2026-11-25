@@ -149,7 +149,8 @@ def _draw_window_bars(ax, labels, series):
     w = 0.13 if n > 2 else 0.3
     x = np.arange(len(labels))
     top = max(1, max(max(v) for v in series.values()))
-    crowded = len(labels) > 10  # a month of windows: rotate the dates, shrink the numbers
+    crowded = len(labels) > 10  # a month of windows: rotate the counts
+    lines = max(str(l).count('\n') for l in labels)  # extra tick-label lines push the missing notes down
 
     for i, name in enumerate(names):
         pos = x + (i - (n - 1) / 2) * (w + 0.01)
@@ -160,10 +161,11 @@ def _draw_window_bars(ax, labels, series):
     for xi, j in zip(x, range(len(labels))):
         missing = inputs[j] - min(series[k][j] for k in names[1:])
         if missing:
-            ax.annotate(f'missing {missing}', xy=(xi, 0), xycoords=('data', 'axes fraction'), xytext=(0, -74 if crowded else -30),
-                        textcoords='offset points', ha='center', fontsize=8, color='#c0392b')
+            ax.annotate(f'missing {missing}', xy=(xi, 0), xycoords=('data', 'axes fraction'), xytext=(0, -30 - 12 * lines),
+                        textcoords='offset points', ha='center', va='top' if crowded else 'baseline',
+                        rotation=90 if crowded else 0, fontsize=7 if crowded else 8, color='#c0392b')
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=8 if crowded else 9, rotation=90 if crowded else 0)
+    ax.set_xticklabels(labels, fontsize=8 if crowded else 9)
     ax.set_ylabel('files')
     ax.set_ylim(0, top * 1.5)
     ax.grid(axis='y', color='#e3e2de', zorder=0)
@@ -175,11 +177,10 @@ def _draw_window_bars(ax, labels, series):
 
 def render_window_chart(labels, series, *, title, filename):
     """Render grouped bars, one group per split window, and save to `filename`."""
-    crowded = len(labels) > 10
     fig, ax = plt.subplots(figsize=(max(10, 0.5 * len(labels)), 5.8), dpi=200)
     _draw_window_bars(ax, labels, series)
     ax.set_title(title, fontsize=11)
-    fig.subplots_adjust(bottom=0.31 if crowded else 0.17)
+    fig.subplots_adjust(bottom=0.17 + 0.04 * max(str(l).count('\n') for l in labels))
     fig.savefig(filename)
     plt.close(fig)
 

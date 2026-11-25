@@ -145,7 +145,8 @@ def _plot(argv, sam, output_directory, condor, state_file, cache_path):
     rows = collect_window_counts(sam, input_dataset, definitions, bounds)
     series = {"input": rows["input"], **{t: rows[d] for t, d in zip(shown, definitions)}}
 
-    labels = [s.astimezone(CENTRAL).strftime("%a %d %b") for s, _ in bounds]
+    label_format = "%b\n%d" if mode == "monthly" else "%a %d %b"  # a month's ticks are narrow
+    labels = [s.astimezone(CENTRAL).strftime(label_format) for s, _ in bounds]
     hours = int(window.total_seconds() // 3600)
     start_local = bounds[0][0].astimezone(CENTRAL).strftime("%H:%M")
     end_local = bounds[0][1].astimezone(CENTRAL).strftime("%H:%M")
